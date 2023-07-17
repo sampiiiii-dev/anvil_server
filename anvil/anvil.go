@@ -6,22 +6,25 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/sampiiiii-dev/anvil_server/anvil/config"
+	"github.com/sampiiiii-dev/anvil_server/anvil/logs"
+	"github.com/sampiiiii-dev/anvil_server/anvil/middlewares"
+	"go.uber.org/zap"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	"go.uber.org/zap"
 )
 
 // Anvil is an instance of the server
 type Anvil struct {
-	s *echo.Echo
+	e *echo.Echo
 	c config.Config
+	s *zap.Logger
 }
 
 func (a *Anvil) Run() {
 	makeBanner(a.c.Server.Version, a.c.Server.BannerWebsite)
-	a.s.Logger.Fatal(a.s.Start(a.c.Server.Address))
+	a.e.Logger.Fatal(a.e.Start(a.c.Server.Address))
 }
 
 func makeBanner(version string, website string) {
@@ -53,45 +56,26 @@ ____________________________________O/_______
 }
 
 func Forge() *Anvil {
-	// Scribe
-	scribe, _ := zap.NewProduction()
-	defer scribe.Sync()
+	s := logs.HireScribe()
 
 	// Load configuration
-	c := config.LoadConfig(scribe)
+	c := config.LoadConfig(s)
 
 	// Echo
 	e := echo.New()
 	e.HideBanner = true
 	e.Logger.SetLevel(log.OFF)
-	e.Use(ZapLogger(scribe)) // Pass the logger to the middleware
 
 	// Middleware
 	e.Use(middleware.Recover())
-
+	e.Use(middlewares.ScribeLogger(s)) // Pass the logger to the middleware
 	// Routes
 	e.GET("/", hello)
 
-	return &Anvil{s: e, c: c}
+	return &Anvil{e, c, s}
 }
 
 // Handler
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
-}
-
-// Zap Middleware
-func ZapLogger(logger *zap.Logger) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			req := c.Request()
-			res := c.Response()
-			logger.Info("incoming request",
-				zap.String("method", req.Method),
-				zap.String("uri", req.RequestURI),
-				zap.Int("status", res.Status),
-			)
-			return next(c)
-		}
-	}
 }
