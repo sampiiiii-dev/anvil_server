@@ -13,7 +13,7 @@ var serveCmd = &cobra.Command{
 
 func startAnvil(cmd *cobra.Command, args []string) {
 	a := anvil.Forge()
-	a.Run("127.0.0.1:1323")
+	a.Run()
 }
 
 func init() {

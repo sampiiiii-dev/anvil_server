@@ -15,17 +15,16 @@ import (
 
 // Anvil is an instance of the server
 type Anvil struct {
-	Echo *echo.Echo
+	s *echo.Echo
+	c config.Config
 }
 
-func (a *Anvil) Run(address string) {
-	makeBanner()
-	a.Echo.Logger.Fatal(a.Echo.Start(address))
+func (a *Anvil) Run() {
+	makeBanner(a.c.Server.Version, a.c.Server.BannerWebsite)
+	a.s.Logger.Fatal(a.s.Start(a.c.Server.Address))
 }
 
-func makeBanner() {
-	version := `0.0.1`
-	website := `https://iforgesheffield.org`
+func makeBanner(version string, website string) {
 	// http://patorjk.com/software/taag/#p=display&v=0&f=Epic&t=iForge%0A
 	banner := `
 _________ _______  _______  _______  _______  _______ 
@@ -58,10 +57,8 @@ func Forge() *Anvil {
 	scribe, _ := zap.NewProduction()
 	defer scribe.Sync()
 
-	_, c_err := config.LoadConfig(".")
-	if c_err != nil {
-		scribe.Warn("unable to load configuration", zap.Error(c_err))
-	}
+	// Load configuration
+	c := config.LoadConfig(scribe)
 
 	// Echo
 	e := echo.New()
@@ -70,13 +67,12 @@ func Forge() *Anvil {
 	e.Use(ZapLogger(scribe)) // Pass the logger to the middleware
 
 	// Middleware
-	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
 	// Routes
 	e.GET("/", hello)
 
-	return &Anvil{Echo: e}
+	return &Anvil{s: e, c: c}
 }
 
 // Handler

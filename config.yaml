@@ -1,0 +1,10 @@
+server:
+  address: "127.0.0.1:1324"
+  version: "0.1"
+  banner_website: "https//iforgesheffield.org"
+db:
+  host:
+  port:
+  user:
+  pass:
+  database:
