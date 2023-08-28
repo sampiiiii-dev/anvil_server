@@ -1,0 +1,15 @@
+server:
+  address: "127.0.0.1:1324"
+  version: "0.1"
+  banner_website: "https://iforgesheffield.org"
+db:
+  host: localhost
+  port: 5432
+  user: foo
+  pass: bar
+  database: go-iforge
+redis:
+  host: localhost
+  port: 6379
+  password:
+  db:
