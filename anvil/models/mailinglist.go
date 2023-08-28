@@ -10,5 +10,5 @@ type MailingList struct {
 	ID          uuid.UUID `gorm:"type:uuid;primary_key;"`
 	Name        string
 	Description string
-	Users       []User `gorm:"many2many:user_mailinglists;`
+	Users       []User `gorm:"many2many:user_mailinglists;"`
 }
