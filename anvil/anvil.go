@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/sampiiiii-dev/anvil_server/anvil/resources"
+	"github.com/sampiiiii-dev/anvil_server/anvil/workers"
+	"github.com/sampiiiii-dev/anvil_server/anvil/workers/jobs"
+	"gorm.io/gorm"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,11 +30,11 @@ import (
 
 // Anvil is an instance of the server
 type Anvil struct {
-	e  *echo.Echo
-	c  *config.Config
-	s  *zap.Logger
-	db *db.Database
-	ks *db.Keystore
+	e *echo.Echo
+	c *config.Config
+	s *zap.Logger
+	d *gorm.DB
+	r *redis.Client
 }
 
 var isShuttingDown int32 // 0 means not shutting down, 1 means shutting down
@@ -63,8 +67,9 @@ func (a *Anvil) Run() {
 		a.s.Error("Failed to close database:", zap.Error(err))
 	}
 	a.s.Info("Database closed.")
-	if err := a.ks.Shutdown(); err != nil {
-		a.s.Error("Failed to close Redis client:", zap.Error(err))
+
+	if err := a.r.Close(); err != nil {
+		a.s.Fatal(err.Error())
 	}
 	a.s.Info("Redis client closed.")
 
@@ -103,6 +108,17 @@ ____________________________________O/_______
 	fmt.Printf(banner, cyan(version), yellow(website))
 }
 
+// NewAnvil creates a new Anvil instance with injected dependencies
+func NewAnvil(e *echo.Echo, c *config.Config, s *zap.Logger, d *gorm.DB, r *redis.Client) *Anvil {
+	return &Anvil{
+		e: e,
+		c: c,
+		s: s,
+		d: d,
+		r: r,
+	}
+}
+
 func Forge() *Anvil {
 	s := logs.HireScribe()
 
@@ -114,21 +130,42 @@ func Forge() *Anvil {
 	e.HideBanner = true
 	e.Logger.SetLevel(log.OFF)
 
-	// Keystore (Redis)
-	ctx := context.Background()
-	ks := db.NewKeystore(ctx)
+	d := db.GetDBInstance()
+	r := db.InitializeRedisClient(c)
 
 	// Middleware
 	e.Use(middleware.Recover())
 	e.Use(middlewares.ScribeLogger(s)) // Pass the logger to the middleware
 	// Routes
 	e.GET("/", hello)
-	resources.RegisterUserRoutes(e, db.GetDBInstance())
+	e.POST("/test_email", test_email)
+	resources.RegisterUserRoutes(e, d)
 
-	return &Anvil{e: e, c: c, s: s, ks: ks}
+	return NewAnvil(e, c, s, d, r)
 }
 
 // Handler
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
+}
+
+func test_email(c echo.Context) error {
+	email := c.QueryParam("email")
+	if email == "" { // Assume isValidEmail validates the email
+		return c.String(http.StatusBadRequest, "Invalid email")
+	}
+
+	// Create a new job
+	job := &jobs.EmailJob{
+		Email: email,
+	}
+
+	redisJobQueue := workers.NewRedisJobQueue(db.InitializeRedisClient(nil), db.InitializeRedisClient(nil).Context())
+
+	// Add the job to the queue
+	if err := redisJobQueue.Enqueue(job, "email"); err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to enqueue job")
+	}
+
+	return c.String(http.StatusOK, "Email sent!")
 }

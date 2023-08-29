@@ -9,31 +9,26 @@ import (
 	"sync"
 )
 
-type Database struct {
-	db    *gorm.DB
-	dbErr error
-}
-
-var once sync.Once
-var instance *gorm.DB
+var onceDB sync.Once
+var instanceDB *gorm.DB
 
 func GetDBInstance() *gorm.DB {
-	once.Do(func() {
+	onceDB.Do(func() {
 		cfg := config.GetConfigInstance(nil)
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d",
 			cfg.DB.Host, cfg.DB.User, cfg.DB.Pass, cfg.DB.Database, cfg.DB.Port)
 
 		var err error
-		instance, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		instanceDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
 			panic("Failed to connect to database: " + err.Error())
 		}
 
-		if err := MigrateDB(instance); err != nil {
+		if err := MigrateDB(instanceDB); err != nil {
 			panic("Failed to migrate database: " + err.Error())
 		}
 	})
-	return instance
+	return instanceDB
 }
 
 // PingDB pings the database to ensure the connection is alive.

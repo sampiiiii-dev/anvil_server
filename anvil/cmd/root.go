@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "forge",
-	Short: "go forge - the iforge backend cli",
+	Use:   "anvil",
+	Short: "Anvil Server",
 }
 
 func Execute() {
@@ -17,4 +16,12 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+}
+
+func initConfig() {
+	// Initialize configuration here
 }

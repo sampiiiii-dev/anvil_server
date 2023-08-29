@@ -1,20 +1,22 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/sampiiiii-dev/anvil_server/anvil/db"
 	"github.com/spf13/cobra"
 )
 
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Run database initialization",
+var initDbCmd = &cobra.Command{
+	Use:   "initdb",
+	Short: "Initialize the database",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Making database")
-
+		initializeDatabase()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(initDbCmd)
+}
+
+func initializeDatabase() {
+	db.GetDBInstance()
 }

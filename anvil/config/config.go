@@ -19,12 +19,18 @@ type Config struct {
 		Pass     string `mapstructure:"pass"`
 		Database string `mapstructure:"database"`
 	} `mapstructure:"db"`
-	Redis struct { // Updated section for Redis configuration with URI components
+	Redis struct {
 		Host     string `mapstructure:"host"`
 		Port     int    `mapstructure:"port"`
 		Password string `mapstructure:"password"`
 		DB       int    `mapstructure:"db"`
 	} `mapstructure:"redis"`
+	SMTP struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+	} `mapstructure:"smtp"`
 }
 
 var once sync.Once
